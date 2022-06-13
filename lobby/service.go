@@ -10,18 +10,32 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
-// MatchServer is the matchmaker server implementation that accepts
+// Logf is the logging function type signature for the server.
+type Logf func(f string, v ...interface{})
+
+// MatchService is the matchmaker server implementation that accepts
 // client connections (websocket) and puts them in queue to make them
 // eligible on the matchmaking algorithm to start a new game.
-type MatchServer struct {
+type MatchService struct {
 	// logf controls where logs are sent.
-	logf func(f string, v ...interface{})
+	logf Logf
+
+	Service MatchMaker
+}
+
+// NewMatchService creates and initializes a new MatchServer
+// instance.
+func NewMatchService(logf Logf) MatchService {
+	return MatchService{
+		logf:    logf,
+		Service: NewMatchMaker(),
+	}
 }
 
 // AcceptClient is the matchmaking server request handler for client
 // connections. It will upgrade HTTP connections into a websocket and
 // send/receive events.
-func (s *MatchServer) AcceptClient(w http.ResponseWriter, r *http.Request) {
+func (s *MatchService) AcceptClient(w http.ResponseWriter, r *http.Request) {
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		Subprotocols: []string{"matchmaker"},
 	})
@@ -42,4 +56,5 @@ func (s *MatchServer) AcceptClient(w http.ResponseWriter, r *http.Request) {
 	cancel()
 
 	wsjson.Write(r.Context(), conn, "Hi client "+login.ClientId)
+	s.Service.Add(r.Context(), PlayerId(login.ClientId))
 }

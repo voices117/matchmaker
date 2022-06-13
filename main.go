@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"log"
-	"net"
-	"net/http"
 	"os"
 	"os/signal"
 	"time"
@@ -23,21 +21,19 @@ func main() {
 // run starts a http.Server for the passed in address
 // with all requests handled by echoServer.
 func run() error {
-	if len(os.Args) < 2 {
-		return errors.New("please provide an address to listen on as the first argument")
+	if len(os.Args) != 2 {
+		return errors.New("please provide an address:port to listen on as the first argument")
 	}
+	address := os.Args[1]
 
-	l, err := net.Listen("tcp", os.Args[1])
-	if err != nil {
-		return err
-	}
-	log.Printf("listening on http://%v", l.Addr())
+	baseCtx := context.Background()
+	serverCtx, cancel := context.WithCancel(baseCtx)
 
-	s := &http.Server{Handler: NewServer(log.Printf)}
+	server := NewServer(log.Printf)
 
 	errc := make(chan error, 1)
 	go func() {
-		errc <- s.Serve(l)
+		errc <- server.Serve(address, serverCtx)
 	}()
 
 	sigs := make(chan os.Signal, 1)
@@ -49,8 +45,11 @@ func run() error {
 		log.Printf("terminating: %v", sig)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	// cancel the server context to stop all services
+	cancel()
+
+	ctx, cancel := context.WithTimeout(baseCtx, time.Second*10)
 	defer cancel()
 
-	return s.Shutdown(ctx)
+	return server.Shutdown(ctx)
 }
