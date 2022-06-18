@@ -2,6 +2,7 @@ package lobby
 
 import (
 	"context"
+	"fmt"
 	"matchmaker/lobby/msg"
 	"net/http"
 	"time"
@@ -55,6 +56,22 @@ func (s *MatchService) AcceptClient(w http.ResponseWriter, r *http.Request) {
 	}
 	cancel()
 
-	wsjson.Write(r.Context(), conn, "Hi client "+login.ClientId)
-	s.Service.Add(r.Context(), PlayerId(login.ClientId))
+	id := PlayerId(login.ClientId)
+
+	// create the channel from where the resulting created match
+	// will be returned
+	response := make(chan Game)
+
+	wsjson.Write(r.Context(), conn, "Hi client "+id)
+	s.Service.Add(r.Context(), id, response)
+
+	// await the match maker response when it's done
+	select {
+	case gameId := <-response:
+		err = wsjson.Write(r.Context(), conn, gameId)
+		if err != nil {
+			fmt.Printf("Failed sending match creation message to %v", id)
+		}
+	case <-r.Context().Done():
+	}
 }
