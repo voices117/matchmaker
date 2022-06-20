@@ -64,7 +64,7 @@ func (s *MatchService) AcceptClient(w http.ResponseWriter, r *http.Request) {
 
 	
 	// id := PlayerId(login.ClientId)
-	id := PlayerId(fmt.Sprintf("Test User %", test_user_id))
+	id := PlayerId(fmt.Sprintf("Test User %v", test_user_id))
 	test_user_id = test_user_id + 1
 	
 	// TODO: le should come from login
