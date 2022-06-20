@@ -13,6 +13,10 @@ import (
 	"math/rand"
 )
 
+var (
+	test_user_id int = 0
+)
+
 // Logf is the logging function type signature for the server.
 type Logf func(f string, v ...interface{})
 
@@ -58,9 +62,9 @@ func (s *MatchService) AcceptClient(w http.ResponseWriter, r *http.Request) {
 	}
 	cancel()
 
-
+	
 	// id := PlayerId(login.ClientId)
-	id := PlayerId(fmt.Sprintf("Test User %v", test_user_id))
+	id := PlayerId(fmt.Sprintf("Test User %", test_user_id))
 	test_user_id = test_user_id + 1
 	
 	// TODO: le should come from login
