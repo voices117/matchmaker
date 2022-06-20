@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+var (
+	LoeThreshold int = 10
+)
+
 // PlayerId type.
 type PlayerId string
 
@@ -15,6 +19,8 @@ type PlayerId string
 type Player struct {
 	// Player ID (must be unique).
 	Id PlayerId
+	// Player LOE
+	Loe int
 	// queue used to signal events to the player's connection.
 	responseQueue chan<- Game
 }
@@ -58,10 +64,8 @@ func NewMatchMaker() MatchMaker {
 // Start the match making algorithm. This function should be
 // called in a separate goroutine.
 func (mm *MatchMaker) Start(ctx context.Context) error {
-	// TODO: implement actual matchmaking logic
-	//       the current logic just matches the first pair
-	//       of users that join the server
-	var waiting *Player = nil
+	// matchmaking logic: the firs player in que found that is within LoeThreshold is selected
+	
 	for {
 		select {
 		case <-ctx.Done():
@@ -69,25 +73,31 @@ func (mm *MatchMaker) Start(ctx context.Context) error {
 			return ctx.Err()
 
 		case player := <-mm.join:
-			if waiting == nil {
-				waiting = player
-			} else {
-				fmt.Printf("Matched %v against %v\n", waiting.Id, player.Id)
-				go mm.createMatch(Match{
-					player1: waiting,
-					player2: player,
-				})
 
-				waiting = nil
+			var match bool = false
+			for _, p := range mm.players {
+				var loe_dif = player.Loe - p.Loe
+				if loe_dif < LoeThreshold && loe_dif > -LoeThreshold {
+					fmt.Printf("Matched %v (%v) against %v (%v)\n [QUEUE: %v]", p.Id, p.Loe, player.Id, player.Loe, len(mm.players)-1)
+					go mm.createMatch(Match{
+						player1: p,
+						player2: player,
+					})
+					delete(mm.players, p.Id)
+					match = true
+				}
+			}
+			if !match {
+				mm.players[player.Id] = player
 			}
 		}
 	}
 }
 
 // Add a client to the matchmaking waiting queue.
-func (mm *MatchMaker) Add(ctx context.Context, id PlayerId, response chan<- Game) error {
+func (mm *MatchMaker) Add(ctx context.Context, id PlayerId, loe int, response chan<- Game) error {
 	select {
-	case mm.join <- &Player{Id: id, responseQueue: response}:
+	case mm.join <- &Player{Id: id, Loe: loe, responseQueue: response}:
 	case <-ctx.Done():
 		return ctx.Err()
 	}

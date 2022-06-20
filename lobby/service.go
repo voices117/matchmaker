@@ -9,6 +9,8 @@ import (
 
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
+
+	"math/rand"
 )
 
 // Logf is the logging function type signature for the server.
@@ -56,14 +58,21 @@ func (s *MatchService) AcceptClient(w http.ResponseWriter, r *http.Request) {
 	}
 	cancel()
 
-	id := PlayerId(login.ClientId)
+
+	// id := PlayerId(login.ClientId)
+	id := PlayerId(fmt.Sprintf("Test User %v", test_user_id))
+	test_user_id = test_user_id + 1
+	
+	// TODO: le should come from login
+	// loe := PlayerId(login.ClientLoe)
+	loe := rand.Intn(100)
 
 	// create the channel from where the resulting created match
 	// will be returned
 	response := make(chan Game)
 
 	wsjson.Write(r.Context(), conn, "Hi client "+id)
-	s.Service.Add(r.Context(), id, response)
+	s.Service.Add(r.Context(), id, loe, response)
 
 	// await the match maker response when it's done
 	select {
