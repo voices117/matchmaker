@@ -6,15 +6,18 @@ import (
 )
 
 func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker) Match {
-	relaxRequirements := 1.0
 
 	for {
-
 		select {
 		case <-time.After(time.Second * 30):
-			relaxRequirements *= 1.03
+			player.relaxRequirements *= 1.03
+			mm.Add(ctx, player.Id, player.responseQueue)
 
 		case player2 := <-player.playersQueue:
+			if player2.Id != player.Id && player.isValidMatch(player2) && player2.isValidMatch(player) {
+				continue
+			}
+
 			player.mtx.Lock()
 			player2_available := player2.mtx.TryLock()
 
@@ -28,7 +31,7 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker) Match {
 			// 	fmt.Printf("Player %v failed processing player %v to check if worthy candidate", id, player2.Id)
 			// }
 
-			if Abs(player.elo-int(float64(player2.elo)*relaxRequirements)) < 50 && player.isWaiting && player2.isWaiting {
+			if player.isWaiting && player2.isWaiting {
 				match := Match{
 					player1: player,
 					player2: player2,
@@ -36,10 +39,13 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker) Match {
 				mm.createMatch(match)
 				player2.setIsInGame()
 				player.setIsInGame()
+				player2.matchQueue <- &match
 
 				player2.mtx.Unlock()
 				player.mtx.Unlock()
 				return match
+			} else {
+				mm.Add(ctx, player2.Id, player2.responseQueue)
 			}
 
 			player2.mtx.Unlock()
@@ -49,6 +55,10 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker) Match {
 			return *matchedGame
 		}
 	}
+}
+
+func (player *Player) isValidMatch(player2 *Player) bool {
+	return Abs(player.elo-int(float64(player2.elo)*player.relaxRequirements)) >= 50
 }
 
 func (player *Player) setIsInGame() {
