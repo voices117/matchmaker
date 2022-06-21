@@ -2,8 +2,8 @@ package lobby
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -17,11 +17,32 @@ type Player struct {
 	Id PlayerId
 	// queue used to signal events to the player's connection.
 	responseQueue chan<- Game
+	// channel that will receive players to ask if it's a valid candidate to generate a game
+	playersQueue chan *Player
+
+	matchQueue chan *Match
+
+	elo int
+
+	isWaiting bool
+
+	mtx sync.Mutex
+}
+
+func NewPlayer(id PlayerId) Player {
+	return Player{
+		isWaiting:     true,
+		elo:           0,
+		responseQueue: make(chan Game),
+		playersQueue:  make(chan *Player),
+		Id:            id,
+	}
 }
 
 // Match represents a pair of players that has been
 // selected to play against each other (i.e. has been matched).
 type Match struct {
+	MatchId string
 	player1 *Player
 	player2 *Player
 }
@@ -58,28 +79,11 @@ func NewMatchMaker() MatchMaker {
 // Start the match making algorithm. This function should be
 // called in a separate goroutine.
 func (mm *MatchMaker) Start(ctx context.Context) error {
-	// TODO: implement actual matchmaking logic
-	//       the current logic just matches the first pair
-	//       of users that join the server
-	var waiting *Player = nil
 	for {
 		select {
 		case <-ctx.Done():
 			// stop the goroutine
 			return ctx.Err()
-
-		case player := <-mm.join:
-			if waiting == nil {
-				waiting = player
-			} else {
-				fmt.Printf("Matched %v against %v\n", waiting.Id, player.Id)
-				go mm.createMatch(Match{
-					player1: waiting,
-					player2: player,
-				})
-
-				waiting = nil
-			}
 		}
 	}
 }
@@ -87,13 +91,9 @@ func (mm *MatchMaker) Start(ctx context.Context) error {
 // Add a client to the matchmaking waiting queue.
 func (mm *MatchMaker) Add(ctx context.Context, id PlayerId, response chan<- Game) error {
 	select {
-	case mm.join <- &Player{Id: id, responseQueue: response}:
 	case <-ctx.Done():
 		return ctx.Err()
 	}
-
-	// successfully inserted in queue
-	return nil
 }
 
 // createMatch creates a new match and informs the players
