@@ -30,8 +30,8 @@ function main(container) {
         container.innerHTML += '<p>[Connected]</p>';
 
         // send login message
-        // TODO: un-hardcode the client_id and game_room_id
-        ws.send(JSON.stringify({ client_id: 'test', game_room_id: 'test' }))
+        // TODO: un-hardcode the client_id
+        ws.send(JSON.stringify({ client_id: 'test', game_room_id: getGameRoom() }))
     }
 
     ws.onclose = function(event) {
@@ -67,4 +67,12 @@ function createBoard(board, ws) {
         table.appendChild(row);
     }
     return table;
+}
+
+// Read the 'room_id' from the URL query params
+function getGameRoom() {
+    const params = new Proxy(new URLSearchParams(window.location.search), {
+        get: (searchParams, prop) => searchParams.get(prop),
+    });
+    return params.room_id;
 }
