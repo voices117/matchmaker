@@ -23,3 +23,13 @@ Current packages are:
 ## Static files
 
 Static files are served from the `static` directory. For example, `http://localhost:8888/index.html` will serve `./static/index.html`.
+
+# Sites
+
+## Matchmaker
+
+To enter the matchmaker start the server and connect through the browser.
+
+## Game
+
+To enter a game go to `/game.html?room_id=<ID>`, where `<ID>` can be any string. If a room with `<ID>` does not exist, one will be created. If it exists, then the game will join that room (unless it's already full).
