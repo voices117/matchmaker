@@ -64,7 +64,7 @@ func (s *GameService) JoinGame(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: remove bot from here!
 	p2, err := room.Join()
-	bot := bot.Bot{}
+	bot := bot.Bot{Game: &room.Game}
 	go bot.Start(p2)
 	// ---------------------------
 

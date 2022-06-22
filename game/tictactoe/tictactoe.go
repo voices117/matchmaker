@@ -33,6 +33,18 @@ func NewTicTacToe() TicTacToe {
 	}
 }
 
+// Copy returns an independent copy of the tic-tac-toe instance.
+func (t *TicTacToe) Copy() *TicTacToe {
+	new := TicTacToe{
+		state:       t.state,
+		turnsPlayed: t.turnsPlayed,
+		currentTurn: t.currentTurn,
+		Board:       make([]rune, len(t.Board)),
+	}
+	copy(new.Board, t.Board)
+	return &new
+}
+
 // AddPlay executes the logic of a player trying to add a play to
 // the corresponding position in the board. The position must be
 // a number between 0 and 8, as if the board was a single array.
@@ -64,6 +76,14 @@ func (t *TicTacToe) AddPlay(play rune, position int) error {
 
 	t.currentTurn = t.getNextTurnPlay()
 	return nil
+}
+
+// Undo undoes the play in the selected position.
+func (t *TicTacToe) Undo(position int) {
+	t.turnsPlayed -= 1
+	t.Board[position] = ' '
+	t.state = STATE_UNFINISHED
+	t.currentTurn = t.getNextTurnPlay()
 }
 
 // GetState returns the game's state.

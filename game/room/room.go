@@ -20,7 +20,7 @@ type Room struct {
 	PlayerX Player
 	PlayerO Player
 
-	game tictactoe.TicTacToe
+	Game tictactoe.TicTacToe
 
 	mtx sync.Mutex
 
@@ -34,7 +34,7 @@ func NewRoom(id string, onFinishCallback func(string)) *Room {
 		joined:           0,
 		PlayerX:          NewPlayer(tictactoe.PLAY_X),
 		PlayerO:          NewPlayer(tictactoe.PLAY_O),
-		game:             tictactoe.NewTicTacToe(),
+		Game:             tictactoe.NewTicTacToe(),
 		onFinishCallback: onFinishCallback,
 	}
 }
@@ -76,19 +76,19 @@ func (room *Room) RunGame(ctx context.Context) {
 		return
 	}
 
-	for room.game.GetState() == tictactoe.STATE_UNFINISHED {
+	for room.Game.GetState() == tictactoe.STATE_UNFINISHED {
 		select {
 		case <-ctx.Done():
-			room.game.Cancel()
+			room.Game.Cancel()
 		case play, ok := <-room.PlayerX.PlayerEvents:
 			if !ok {
-				room.game.Cancel()
+				room.Game.Cancel()
 			} else {
 				room.setPlay(room.PlayerX, play.Position)
 			}
 		case play, ok := <-room.PlayerO.PlayerEvents:
 			if !ok {
-				room.game.Cancel()
+				room.Game.Cancel()
 			} else {
 				room.setPlay(room.PlayerO, play.Position)
 			}
@@ -97,7 +97,7 @@ func (room *Room) RunGame(ctx context.Context) {
 		// send update status to the players
 		if room.sendGameState(&room.PlayerX) != nil || room.sendGameState(&room.PlayerO) != nil {
 			log.Printf("Failed sending initial game status")
-			room.game.Cancel()
+			room.Game.Cancel()
 			return
 		}
 	}
@@ -118,16 +118,16 @@ func (room *Room) sendGameState(player *Player) error {
 func (room *Room) getGameStateMsg() msg.GameState {
 	return msg.GameState{
 		Error:       "",
-		Board:       string(room.game.Board),
-		State:       room.game.GetState(),
-		CurrentTurn: string(room.game.GetCurrentTurn()),
+		Board:       string(room.Game.Board),
+		State:       room.Game.GetState(),
+		CurrentTurn: string(room.Game.GetCurrentTurn()),
 	}
 }
 
 // setPlay handles the input action sent by the player, applies
 // it to the game and sends the response to the player.
 func (room *Room) setPlay(player Player, position int) error {
-	if err := room.game.AddPlay(player.Play, position); err != nil {
+	if err := room.Game.AddPlay(player.Play, position); err != nil {
 		player.GameEvents <- msg.GameState{Error: err.Error()}
 	}
 	return nil
