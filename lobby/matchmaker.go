@@ -34,7 +34,7 @@ type Player struct {
 func NewPlayer(id PlayerId) Player {
 	return Player{
 		isWaiting:         true,
-		elo:               0,
+		elo:               100,
 		responseQueue:     make(chan Game),
 		playersQueue:      make(chan *Player),
 		Id:                id,
@@ -45,7 +45,7 @@ func NewPlayer(id PlayerId) Player {
 // Match represents a pair of players that has been
 // selected to play against each other (i.e. has been matched).
 type Match struct {
-	MatchId string
+	GameRoom string
 	player1 *Player
 	player2 *Player
 }
@@ -91,6 +91,7 @@ func (mm *MatchMaker) Start(ctx context.Context) error {
 		case player := <-mm.join:
 			// notify all players about player
 			for _, p := range mm.players {
+				log.Println("Player joining...")
 				player.playersQueue <- p
 			}
 		}
