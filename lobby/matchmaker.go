@@ -5,6 +5,8 @@ import (
 	"log"
 	"sync"
 	"time"
+
+	"matchmaker/playerdb"
 )
 
 // PlayerId type.
@@ -34,7 +36,7 @@ type Player struct {
 func NewPlayer(id PlayerId) Player {
 	return Player{
 		isWaiting:         true,
-		elo:               100,
+		elo:               playerdb.PlayerDB.GetData(string(id)),
 		responseQueue:     make(chan Game),
 		playersQueue:      make(chan *Player),
 		Id:                id,

@@ -1,12 +1,14 @@
 package playerdb
 
 import (
-	"sync"
-	"fmt" 
+	"sync" 
 )
 
 var (
-	intialElo = 100
+	PlayerDB = PlayerData{
+		playerList: map[string]int{},
+	}
+	intialElo = 1000
 )
 
 
@@ -31,13 +33,6 @@ func (c *PlayerData) Update(key string, value int) {
 	c.playerList[key] = value
 }
 
-func (c *PlayerData) Len() int {
-	c.mu.Lock()
-	// Lock so only one goroutine at a time can access the map c.playerList.
-	defer c.mu.Unlock()
-	return len(c.playerList)
-}
-
 func (c *PlayerData) GetData(key string) int {
 	c.mu.Lock()
 	// Lock so only one goroutine at a time can access the map c.playerList.
@@ -48,36 +43,4 @@ func (c *PlayerData) GetData(key string) int {
 	// Need to initialize player
 	c.playerList[key] = intialElo
 	return intialElo
-}
-
-type PlayerQueue struct {
-	mu sync.Mutex
-	playerList []string
-}
-
-func (c *PlayerQueue) Add(key string) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	for _, v := range c.playerList {
-		if v == key {
-			return false
-		}
-	}
-	c.playerList = append(c.playerList, key)
-	return true
-}
-
-func (c *PlayerQueue) Remove(key string) bool {
-	// Tries to remove a player from the player Queue. 
-	// Returns true if it could be removed else flase
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	for i, v := range c.playerList {
-		if v == key {
-			c.playerList = append(c.playerList[:i], c.playerList[i+1:]...)
-			return true
-		}
-	}
-	return false
 }
