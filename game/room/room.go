@@ -9,14 +9,16 @@ import (
 	"sync"
 	"time"
 
-	// TODO: Uncoment
-	// "matchmaker/playerdb"
+	"matchmaker/playerdb"
 )
 
 // Room represents a game instance where two players are
 // connected to and send/receive events to synchronize state.
 type Room struct {
 	id string
+
+	PlayerXID string
+	PlayerOID string
 
 	joined int
 
@@ -45,15 +47,17 @@ func NewRoom(id string, onFinishCallback func(string)) *Room {
 // Join adds a player to the game room and returns the corresponding
 // player connection so the client can interact with the game. If the
 // game room is full, returns an error.
-func (room *Room) Join() (*Player, error) {
+func (room *Room) Join(playerID string) (*Player, error) {
 	room.mtx.Lock()
 	defer room.mtx.Unlock()
 
 	if room.joined == 0 {
 		room.joined += 1
+		room.PlayerXID = playerID
 		return &room.PlayerX, nil
 	} else if room.joined == 1 {
 		room.joined += 1
+		room.PlayerOID = playerID
 		return &room.PlayerO, nil
 	} else {
 		return nil, fmt.Errorf("Room is full")
@@ -106,8 +110,8 @@ func (room *Room) RunGame(ctx context.Context) {
 	}
 
 	// Update player ELOs
-	// TODO: need to get player IDs of X and O to update on playerDB
-	// playerdb.PlayerDB.UpdateAfterMatch(string(room.PlayerO), string(room.PlayerO), room.Game.GetState())
+	playerdb.PlayerDB.UpdateAfterMatch(room.PlayerOID, string(room.PlayerO.Play), room.Game.GetState())
+	playerdb.PlayerDB.UpdateAfterMatch(room.PlayerXID, string(room.PlayerX.Play), room.Game.GetState())
 }
 
 // sendGameState sends the current game state to the corresponding
