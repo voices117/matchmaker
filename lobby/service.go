@@ -57,9 +57,11 @@ func (s *MatchService) AcceptClient(w http.ResponseWriter, r *http.Request) {
 
 	id := PlayerId(login.ClientId)
 
-	wsjson.Write(r.Context(), conn, "Hi client "+id)
 
 	player := NewPlayer(id)
 
-	go player.StartPlayer(r.Context(), &s.Service)
+	match := player.StartPlayer(r.Context(), &s.Service)
+
+	wsjson.Write(r.Context(), conn, match)
+
 }

@@ -3,18 +3,32 @@ package lobby
 import (
 	"context"
 	"time"
+	"log"
+
+	"github.com/google/uuid"
+
 )
 
 func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker) Match {
 
+	// TODO: fix match making
+
+	return Match{
+					player1: player,
+					player2: player,
+					GameRoom: uuid.NewString(),
+				}
+
 	for {
 		select {
 		case <-time.After(time.Second * 30):
+			log.Println("Relaxing Requirements...")
 			player.relaxRequirements *= 1.03
 			mm.Add(ctx, player.Id, player.responseQueue)
 
 		case player2 := <-player.playersQueue:
-			if player2.Id != player.Id && player.isValidMatch(player2) && player2.isValidMatch(player) {
+			log.Println("entering Case...")
+			if player2.Id == player.Id || !player.isValidMatch(player2) || !player2.isValidMatch(player) {
 				continue
 			}
 
@@ -22,9 +36,11 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker) Match {
 			player2_available := player2.mtx.TryLock()
 
 			if !player2_available {
+				log.Println("Continuing...")
 				player.mtx.Unlock()
 				continue
 			}
+			log.Println("Not Continuing...")
 
 			// err = wsjson.Write(r.Context(), conn, player2)
 			// if err != nil {
@@ -35,6 +51,7 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker) Match {
 				match := Match{
 					player1: player,
 					player2: player2,
+					GameRoom: uuid.NewString(),
 				}
 				mm.createMatch(match)
 				player2.setIsInGame()
@@ -58,7 +75,7 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker) Match {
 }
 
 func (player *Player) isValidMatch(player2 *Player) bool {
-	return Abs(player.elo-int(float64(player2.elo)*player.relaxRequirements)) >= 50
+	return Abs(player.elo-player2.elo) <= int(50 * player.relaxRequirements)
 }
 
 func (player *Player) setIsInGame() {
