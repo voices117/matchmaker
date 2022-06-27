@@ -14,7 +14,7 @@ function main(container) {
         } else {
             if (data.state != 'Unfinished') {
                 let title = document.getElementById('title');
-                title.innerText = data.state;
+                title.innerHTML = data.state + '<br><a href="/"> New Game?</a>';
                 container.appendChild(title);
             }
 
