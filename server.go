@@ -32,6 +32,7 @@ func NewServer(logf lobby.Logf) *Server {
 	server := Server{
 		logf:       logf,
 		matchmaker: lobby.NewMatchService(logf),
+		gameServer: game.NewGameService(),
 	}
 	server.httpServer = &http.Server{Handler: &server}
 
