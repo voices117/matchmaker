@@ -8,6 +8,9 @@ import (
 	"matchmaker/game/tictactoe"
 	"sync"
 	"time"
+
+	// TODO: Uncoment
+	// "matchmaker/playerdb"
 )
 
 // Room represents a game instance where two players are
@@ -101,6 +104,10 @@ func (room *Room) RunGame(ctx context.Context) {
 			return
 		}
 	}
+
+	// Update player ELOs
+	// TODO: need to get player IDs of X and O to update on playerDB
+	// playerdb.PlayerDB.UpdateAfterMatch(string(room.PlayerO), string(room.PlayerO), room.Game.GetState())
 }
 
 // sendGameState sends the current game state to the corresponding
