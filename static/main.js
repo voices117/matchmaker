@@ -7,6 +7,12 @@ function main(container) {
         msg.innerText = event.data;
 
         container.appendChild(msg);
+
+        let data = JSON.parse(event.data);
+
+        if (data.GameRoom !== undefined) {
+            window.location.href = "/game.html?room_id=" + data.GameRoom;
+        }
     }
 
     ws.onerror = function(error) {
