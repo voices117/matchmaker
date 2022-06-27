@@ -3,6 +3,7 @@ package playerdb
 import (
 	"sync" 
 	"fmt"
+	"strings"
 )
 
 var (
@@ -34,19 +35,21 @@ func (c *PlayerData) Update(key string, value int) {
 	c.playerList[key] = value
 }
 
-func (c *PlayerData) UpdateAfterMatch(player0 string, playerX string, result string) {
-	var elo0 = c.GetData(player0)
-	var eloX = c.GetData(playerX)
+func (c *PlayerData) UpdateAfterMatch(player string, rune string, result string) {
 
-	if result == "Player O won" {
-		c.Update(player0, elo0 + 100)
-		c.Update(playerX, eloX - 100)
+	var playerElo = c.GetData(player)
+
+	if strings.Contains(result, "Tied") {
+		fmt.Println("Players Tied: no ELO update!")
+		return
+	}
+	if strings.Contains(result, "won") && strings.Contains(result, rune) {
+		c.Update(player, playerElo + 100)
 	} else {
-		c.Update(player0, elo0 - 100)
-		c.Update(playerX, eloX + 100)
+		c.Update(player, playerElo - 50)
 	}
 
-	fmt.Println("%d , %d -> %d, %d", elo0, eloX, c.GetData(player0), c.GetData(playerX))
+	fmt.Println("ELO UPDATE! ", player, ":", playerElo, " ---> ", c.GetData(player))
 }
 
 func (c *PlayerData) GetData(key string) int {

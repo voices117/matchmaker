@@ -11,6 +11,7 @@ import (
 
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
+
 )
 
 // GameService is the game server implementation that handles
@@ -51,7 +52,7 @@ func (s *GameService) JoinGame(w http.ResponseWriter, r *http.Request) {
 	cancel()
 
 	room := s.rooms.GetOrCreate(login.GameRoomId)
-	player, err := room.Join()
+	player, err := room.Join(login.ClientId)
 	if err != nil {
 		wsjson.Write(r.Context(), conn, msg.GameState{Error: err.Error()})
 		return
@@ -63,7 +64,7 @@ func (s *GameService) JoinGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: remove bot from here!
-	p2, err := room.Join()
+	p2, err := room.Join("botID")
 	bot := bot.Bot{Game: &room.Game}
 	go bot.Start(p2)
 	// ---------------------------
@@ -75,9 +76,11 @@ func (s *GameService) JoinGame(w http.ResponseWriter, r *http.Request) {
 		}
 	}(r.Context(), conn)
 
+
 	// player events receiver
 	for {
 		playerMsg := msg.SelectPosition{}
+
 		if err := wsjson.Read(r.Context(), conn, &playerMsg); err != nil {
 			log.Printf("Failed reading player message: %v", err)
 			close(player.PlayerEvents)
@@ -85,4 +88,6 @@ func (s *GameService) JoinGame(w http.ResponseWriter, r *http.Request) {
 		}
 		player.PlayerEvents <- playerMsg
 	}
+
+	
 }
