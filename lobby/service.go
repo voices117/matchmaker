@@ -5,7 +5,6 @@ import (
 	"log"
 	"matchmaker/lobby/msg"
 	"net/http"
-	"sync"
 	"time"
 
 	"nhooyr.io/websocket"
@@ -25,7 +24,6 @@ type MatchService struct {
 	Service MatchMaker
 }
 
-var wg sync.WaitGroup
 
 // NewMatchService creates and initializes a new MatchServer
 // instance.

@@ -37,7 +37,6 @@ func NewPlayer(id PlayerId) Player {
 	return Player{
 		isWaiting: true,
 		elo:       playerdb.PlayerDB.GetData(string(id)),
-		// responseQueue:     make(chan Game),
 		playersQueue:      make(chan *Player),
 		matchQueue:        make(chan *Match),
 		Id:                id,
@@ -128,20 +127,3 @@ func (mm *MatchMaker) Add(ctx context.Context, id PlayerId) error {
 
 // createMatch creates a new match and informs the players
 // about the event.
-// func (mm *MatchMaker) createMatch(match Match) {
-// 	// TODO: create game and get real ID
-// 	game := Game{
-// 		Id: "<fake game ID>",
-// 	}
-
-// 	send := func(player *Player) {
-// 		select {
-// 		case player.responseQueue <- game:
-// 		case <-time.After(time.Second * 15):
-// 			log.Printf("Failed sending game Id to player '%v'", player.Id)
-// 		}
-// 	}
-
-// 	go send(match.player1)
-// 	go send(match.player2)
-// }

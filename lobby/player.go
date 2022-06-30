@@ -41,14 +41,12 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker, matchResp
 
 				player2.setIsInGame()
 				player.setIsInGame()
-				log.Printf("Set both players in match\n")
-				log.Printf("Player2 status %+v\n", player2)
+				log.Printf("Set player %v and %v in match\n", player.Id, player2.Id)
 				select {
 				case player2.matchQueue <- &match:
 				case <-time.After(time.Second * 15):
 					log.Panicf("Failed sending game Id to player '%v'", player2.Id)
 				}
-				log.Printf("player2.matchQueue <- &match\n")
 
 				player2.mtx.Unlock()
 				player.mtx.Unlock()
@@ -64,7 +62,7 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker, matchResp
 				player.mtx.Unlock()
 			}
 
-			log.Printf("Player %v leaving Case correctly ...\n", player.Id)
+			log.Printf("Player %v created game correctly\n", player.Id)
 
 		case matchedGame := <-player.matchQueue:
 			select {
