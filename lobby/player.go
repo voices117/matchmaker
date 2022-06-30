@@ -13,14 +13,10 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker, matchResp
 
 	for {
 		select {
-		case <-time.After(time.Second * 30):
-			log.Printf("Player %v Relaxing Requirements...\n", player.Id)
-			player.relaxRequirements *= 1.03
-			mm.Add(ctx, player.Id)
-
 		case player2 := <-player.playersQueue:
 			log.Printf("Player %v entering Case...\n", player.Id)
 			if player2.Id == player.Id || !player.isValidMatch(player2) || !player2.isValidMatch(player) {
+				log.Printf("Player %v leaving Case...\n", player.Id)
 				continue
 			}
 
@@ -28,7 +24,7 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker, matchResp
 			player2_available := player2.mtx.TryLock()
 
 			if !player2_available {
-				log.Println("Continuing...")
+				log.Printf("Player %v leaving Case 2...\n", player.Id)
 				player.mtx.Unlock()
 				continue
 			}
@@ -43,27 +39,11 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker, matchResp
 
 				log.Printf("Created match: %+v\n", match)
 
-				game := Game{
-					Id: string(player.Id + player2.Id),
-				}
-
-				// select {
-				player.responseQueue <- game
-				// case <-time.After(time.Second * 15):
-				// 	log.Panicf("Player %+v Failed sending game Id to player '%v'", player.Id, player.Id)
-				// }
-
-				// select {
-				player2.responseQueue <- game
-				// case <-time.After(time.Second * 15):
-				// 	log.Panicf("Failed sending game Id to player '%v'", player2.Id)
-				// }
-
 				player2.setIsInGame()
 				player.setIsInGame()
 				log.Printf("Set both players in match\n")
+				log.Printf("Player2 status %+v\n", player2)
 				select {
-
 				case player2.matchQueue <- &match:
 				case <-time.After(time.Second * 15):
 					log.Panicf("Failed sending game Id to player '%v'", player2.Id)
@@ -84,12 +64,19 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker, matchResp
 				player.mtx.Unlock()
 			}
 
+			log.Printf("Player %v leaving Case correctly ...\n", player.Id)
+
 		case matchedGame := <-player.matchQueue:
 			select {
 			case matchResponse <- matchedGame:
 			case <-time.After(time.Second * 15):
 				log.Printf("Failed sending match to response\n")
 			}
+
+		case <-time.After(time.Second * 30):
+			log.Printf("Player %v Relaxing Requirements...\n", player.Id)
+			player.relaxRequirements *= 1.03
+			mm.Add(ctx, player.Id)
 		}
 
 	}

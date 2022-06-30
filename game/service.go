@@ -3,7 +3,6 @@ package game
 import (
 	"context"
 	"log"
-	"matchmaker/game/bot"
 	"matchmaker/game/msg"
 	"matchmaker/game/room"
 	"net/http"
@@ -11,7 +10,6 @@ import (
 
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
-
 )
 
 // GameService is the game server implementation that handles
@@ -63,19 +61,12 @@ func (s *GameService) JoinGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: remove bot from here!
-	p2, err := room.Join("botID")
-	bot := bot.Bot{Game: &room.Game}
-	go bot.Start(p2)
-	// ---------------------------
-
 	// game updates sender
 	go func(ctx context.Context, conn *websocket.Conn) {
 		for message := range player.GameEvents {
 			wsjson.Write(ctx, conn, &message)
 		}
 	}(r.Context(), conn)
-
 
 	// player events receiver
 	for {
@@ -89,5 +80,4 @@ func (s *GameService) JoinGame(w http.ResponseWriter, r *http.Request) {
 		player.PlayerEvents <- playerMsg
 	}
 
-	
 }
