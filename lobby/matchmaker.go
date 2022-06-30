@@ -48,8 +48,8 @@ func NewPlayer(id PlayerId) Player {
 // selected to play against each other (i.e. has been matched).
 type Match struct {
 	GameRoom string
-	player1 *Player
-	player2 *Player
+	player1  *Player
+	player2  *Player
 }
 
 // Represents the created game for a particular match.
@@ -91,19 +91,32 @@ func (mm *MatchMaker) Start(ctx context.Context) error {
 			return ctx.Err()
 
 		case player := <-mm.join:
+			log.Printf("Inserted player in queue %+v %+v\n", mm, player)
 			// notify all players about player
 			for _, p := range mm.players {
 				log.Println("Player joining...")
 				player.playersQueue <- p
 			}
+
+		case <-time.After(time.Second * 30):
+			log.Printf("Match maker status %+v", mm)
 		}
 	}
 }
 
+func (mm *MatchMaker) AddPlayer(player *Player) {
+	mm.players[player.Id] = player
+}
+
 // Add a client to the matchmaking waiting queue.
-func (mm *MatchMaker) Add(ctx context.Context, id PlayerId, response chan<- Game) error {
+func (mm *MatchMaker) Add(ctx context.Context, id PlayerId) error {
+	log.Printf("Add of %+v %v\n", mm, id)
+	player, _ := mm.players[id]
+
+	log.Printf("Player %+v\n", player)
+
 	select {
-	case mm.join <- &Player{Id: id, responseQueue: response}:
+	case mm.join <- player:
 	case <-ctx.Done():
 		return ctx.Err()
 	}
@@ -123,7 +136,7 @@ func (mm *MatchMaker) createMatch(match Match) {
 	send := func(player *Player) {
 		select {
 		case player.responseQueue <- game:
-		case <-time.After(time.Second * 5):
+		case <-time.After(time.Second * 15):
 			log.Printf("Failed sending game Id to player '%v'", player.Id)
 		}
 	}
