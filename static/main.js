@@ -3,15 +3,20 @@ function main(container) {
     let ws = new WebSocket(url + "/matchmaker", "matchmaker");
 
     ws.onmessage = (event) => {
-        let msg = document.createElement('p');
-        msg.innerText = event.data;
-
-        container.appendChild(msg);
-
         let data = JSON.parse(event.data);
 
         if (data.GameRoom !== undefined) {
-            window.location.href = "/game.html?room_id=" + data.GameRoom;
+            container.appendChild(createEventBox('Match ready!'));
+            container.appendChild(createEventBox('Joining game...'));
+
+            setTimeout(function() {
+                // redirect to game room
+                window.location.href = `/game.html?room_id=${data.GameRoom}&player_id=${getPlayerId()}`;
+            }, 2000)
+
+        } else {
+            container.appendChild(createEventBox(data));
+            container.scrollTop = container.scrollHeight;
         }
     }
 
@@ -20,18 +25,20 @@ function main(container) {
     }
 
     ws.onopen = () => {
-        container.innerHTML += '<p>[Connected]</p>';
+        container.appendChild(createEventBox('Connected, waiting for match...'));
 
         // send login message
         ws.send(JSON.stringify({ client_id: getPlayerId() }))
     }
 
     ws.onclose = function(event) {
+        var msg = '';
         if (event.wasClean) {
-            container.innerHTML += `<p>[close] Connection closed cleanly, code=${event.code} reason=${event.reason}</p>`;
+            msg = `Connection closed cleanly, code=${event.code} reason=${event.reason}`;
         } else {
-            container.innerHTML = '<p>[close] Connection died</p>';
+            msg = 'Connection died';
         }
+        container.appendChild(createEventBox(msg));
     }
 }
 
@@ -40,4 +47,12 @@ function getPlayerId() {
         get: (searchParams, prop) => searchParams.get(prop),
     });
     return params.player_id;
+}
+
+
+function createEventBox(msg) {
+    var e = document.createElement('div');
+    e.className = 'event';
+    e.innerText = msg;
+    return e
 }

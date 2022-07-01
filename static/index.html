@@ -2,16 +2,63 @@
 
 <head>
     <script type="text/javascript" src="/main.js"></script>
+    <style>
+        body {
+            background-color: rgb(59, 180, 122);
+            padding: 0;
+            margin: 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        #container {
+            background-color: rgb(208, 207, 207);
+            display: flex;
+            align-items: stretch;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 80vh;
+            margin-top: 10vh;
+        }
+        
+        #events {
+            padding: 20px;
+            flex-grow: 3;
+            overflow: scroll;
+        }
+        
+        #other_events {
+            background-color: rgb(52, 52, 52);
+            padding: 20px;
+            flex-grow: 1;
+        }
+        
+        .event {
+            background-color: rgb(255, 255, 255);
+            border-color: rgb(255, 255, 255);
+            border-radius: 5px;
+            border-width: 10px;
+            border-style: solid;
+            font-size: 20px;
+            color: rgb(33, 33, 33);
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
 
 <body>
     <title>Matchmaker</title>
 
-    <div id="content"></div>
+    <div id="container">
+        <div id="events">
+        </div>
+        <div id="other_events">
+        </div>
+    </div>
 
     <script type="text/javascript">
         // main function defined in matchmaker.js
-        main(document.getElementById('content'));
+        main(document.getElementById('events'));
     </script>
 </body>
 

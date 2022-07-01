@@ -35,8 +35,8 @@ type Player struct {
 
 func NewPlayer(id PlayerId) Player {
 	return Player{
-		isWaiting: true,
-		elo:       playerdb.PlayerDB.GetData(string(id)),
+		isWaiting:         true,
+		elo:               playerdb.PlayerDB.GetData(string(id)),
 		playersQueue:      make(chan *Player),
 		matchQueue:        make(chan *Match),
 		Id:                id,
@@ -95,7 +95,10 @@ func (mm *MatchMaker) Start(ctx context.Context) error {
 			// notify all players about player
 			for _, p := range mm.players {
 				log.Println("Player joining...")
-				player.playersQueue <- p
+				select {
+				case player.playersQueue <- p:
+				default:
+				}
 			}
 
 		case <-time.After(time.Second * 30):
