@@ -2,6 +2,7 @@ package lobby
 
 import (
 	"context"
+	"log"
 	"matchmaker/lobby/msg"
 	"net/http"
 	"time"
@@ -22,6 +23,7 @@ type MatchService struct {
 
 	Service MatchMaker
 }
+
 
 // NewMatchService creates and initializes a new MatchServer
 // instance.
@@ -56,12 +58,28 @@ func (s *MatchService) AcceptClient(w http.ResponseWriter, r *http.Request) {
 	cancel()
 
 	id := PlayerId(login.ClientId)
-
+	log.Printf("Accepting client with id '%v' '%v'\n", id, login.ClientId)
 
 	player := NewPlayer(id)
 
-	match := player.StartPlayer(r.Context(), &s.Service)
+	log.Printf("Adding client '%v' to queue \n", id)
 
-	wsjson.Write(r.Context(), conn, match)
+	s.Service.AddPlayer(&player)
+	s.Service.Add(r.Context(), player.Id)
+
+	matchResponse := make(chan *Match)
+
+	go player.StartPlayer(r.Context(), &s.Service, matchResponse)
+
+	select {
+	case match := <-matchResponse:
+		{
+			log.Printf("Got match %+v match\n", match)
+
+			wsjson.Write(r.Context(), conn, match)
+		}
+	case <-time.After(time.Minute * 2):
+		log.Printf("Waited for 2 minutes for a match")
+	}
 
 }

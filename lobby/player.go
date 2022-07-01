@@ -2,33 +2,21 @@ package lobby
 
 import (
 	"context"
-	"time"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
-
 )
 
-func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker) Match {
-
-	// TODO: fix match making
-
-	return Match{
-					player1: player,
-					player2: player,
-					GameRoom: uuid.NewString(),
-				}
+func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker, matchResponse chan *Match) {
+	log.Printf("Start player %+v\n", player)
 
 	for {
 		select {
-		case <-time.After(time.Second * 30):
-			log.Println("Relaxing Requirements...")
-			player.relaxRequirements *= 1.03
-			mm.Add(ctx, player.Id, player.responseQueue)
-
 		case player2 := <-player.playersQueue:
-			log.Println("entering Case...")
+			log.Printf("Player %v entering Case...\n", player.Id)
 			if player2.Id == player.Id || !player.isValidMatch(player2) || !player2.isValidMatch(player) {
+				log.Printf("Player %v leaving Case...\n", player.Id)
 				continue
 			}
 
@@ -36,46 +24,64 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker) Match {
 			player2_available := player2.mtx.TryLock()
 
 			if !player2_available {
-				log.Println("Continuing...")
+				log.Printf("Player %v leaving Case 2...\n", player.Id)
 				player.mtx.Unlock()
 				continue
 			}
 			log.Println("Not Continuing...")
 
-			// err = wsjson.Write(r.Context(), conn, player2)
-			// if err != nil {
-			// 	fmt.Printf("Player %v failed processing player %v to check if worthy candidate", id, player2.Id)
-			// }
-
 			if player.isWaiting && player2.isWaiting {
 				match := Match{
-					player1: player,
-					player2: player2,
+					player1:  player,
+					player2:  player2,
 					GameRoom: uuid.NewString(),
 				}
-				mm.createMatch(match)
+
+				log.Printf("Created match: %+v\n", match)
+
 				player2.setIsInGame()
 				player.setIsInGame()
-				player2.matchQueue <- &match
+				log.Printf("Set player %v and %v in match\n", player.Id, player2.Id)
+				select {
+				case player2.matchQueue <- &match:
+				case <-time.After(time.Second * 15):
+					log.Panicf("Failed sending game Id to player '%v'", player2.Id)
+				}
 
 				player2.mtx.Unlock()
 				player.mtx.Unlock()
-				return match
+				log.Printf("Unlocked both players\n")
+				select {
+				case matchResponse <- &match:
+				case <-time.After(time.Second * 15):
+					log.Panicf("Failed sending match to matchResponse ")
+				}
 			} else {
-				mm.Add(ctx, player2.Id, player2.responseQueue)
+				mm.Add(ctx, player2.Id)
+				player2.mtx.Unlock()
+				player.mtx.Unlock()
 			}
 
-			player2.mtx.Unlock()
-			player.mtx.Unlock()
+			log.Printf("Player %v created game correctly\n", player.Id)
 
 		case matchedGame := <-player.matchQueue:
-			return *matchedGame
+			select {
+			case matchResponse <- matchedGame:
+			case <-time.After(time.Second * 15):
+				log.Printf("Failed sending match to response\n")
+			}
+
+		case <-time.After(time.Second * 30):
+			log.Printf("Player %v Relaxing Requirements...\n", player.Id)
+			player.relaxRequirements *= 1.03
+			mm.Add(ctx, player.Id)
 		}
+
 	}
 }
 
 func (player *Player) isValidMatch(player2 *Player) bool {
-	return Abs(player.elo-player2.elo) <= int(50 * player.relaxRequirements)
+	return Abs(player.elo-player2.elo) <= int(50*player.relaxRequirements)
 }
 
 func (player *Player) setIsInGame() {
