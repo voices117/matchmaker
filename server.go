@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"matchmaker/game"
+	"matchmaker/game/bot"
 	"matchmaker/lobby"
+	"math/rand"
 	"net"
 	"net/http"
 )
@@ -42,6 +46,7 @@ func NewServer(logf lobby.Logf) *Server {
 	// adds handlers for matchmaking and game services
 	server.mux.HandleFunc("/matchmaker", server.matchmaker.AcceptClient)
 	server.mux.HandleFunc("/game", server.gameServer.JoinGame)
+	server.mux.HandleFunc("/bot", server.CreateBot)
 
 	return &server
 }
@@ -77,4 +82,58 @@ func (server *Server) Serve(address string, ctx context.Context) error {
 // Gracefully shutdown the server.
 func (server *Server) Shutdown(ctx context.Context) error {
 	return server.httpServer.Shutdown(ctx)
+}
+
+// CreateBot is an endpoint that creates a bot and puts it into the
+// queue.
+func (s *Server) CreateBot(w http.ResponseWriter, r *http.Request) {
+	i := rand.Intn(999)
+	player := lobby.NewPlayer(lobby.PlayerId(fmt.Sprintf("Bot %v", i)))
+
+	go func(player *lobby.Player) {
+		log.Printf("Adding bot '%v' to queue \n", player.Id)
+
+		s.matchmaker.Service.AddPlayer(player)
+		s.matchmaker.Service.Add(r.Context(), player.Id)
+		for {
+			s.botRoutine(player)
+		}
+	}(&player)
+}
+
+func (s *Server) botRoutine(player *lobby.Player) {
+	matchResponse := make(chan interface{})
+
+	ctx := context.Background()
+	go player.StartPlayer(ctx, &s.matchmaker.Service, matchResponse)
+
+	var match *lobby.Match = nil
+	stop := false
+	for !stop || match == nil {
+		select {
+		case match = <-player.MatchQueue:
+		case event, ok := <-matchResponse:
+			if !ok {
+				stop = true
+			}
+			switch event.(type) {
+			case *lobby.Match:
+				log.Printf("Bot %v has match %+v match\n", player.Id, event)
+				match = event.(*lobby.Match)
+			default:
+				log.Printf("Bot %v has received event %v", player.Id, event)
+			}
+		}
+	}
+
+	room := s.gameServer.Rooms.GetOrCreate(match.GameRoom)
+
+	log.Printf("Bot joining room %v", room)
+	gameControls, err := room.Join(string(player.Id))
+	if err != nil {
+		log.Printf("Failed joining game: %v", err)
+		return
+	}
+	bot := bot.Bot{Game: &room.Game}
+	bot.Start(gameControls)
 }

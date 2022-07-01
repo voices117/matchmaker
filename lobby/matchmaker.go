@@ -22,7 +22,7 @@ type Player struct {
 	// channel that will receive players to ask if it's a valid candidate to generate a game
 	playersQueue chan *Player
 
-	matchQueue chan *Match
+	MatchQueue chan *Match
 
 	elo int
 
@@ -38,7 +38,7 @@ func NewPlayer(id PlayerId) Player {
 		isWaiting:         true,
 		elo:               playerdb.PlayerDB.GetData(string(id)),
 		playersQueue:      make(chan *Player),
-		matchQueue:        make(chan *Match),
+		MatchQueue:        make(chan *Match),
 		Id:                id,
 		relaxRequirements: 1.0,
 	}
