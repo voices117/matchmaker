@@ -24,7 +24,6 @@ type MatchService struct {
 	Service MatchMaker
 }
 
-
 // NewMatchService creates and initializes a new MatchServer
 // instance.
 func NewMatchService(logf Logf) MatchService {
@@ -67,19 +66,17 @@ func (s *MatchService) AcceptClient(w http.ResponseWriter, r *http.Request) {
 	s.Service.AddPlayer(&player)
 	s.Service.Add(r.Context(), player.Id)
 
-	matchResponse := make(chan *Match)
+	matchResponse := make(chan interface{})
 
 	go player.StartPlayer(r.Context(), &s.Service, matchResponse)
 
-	select {
-	case match := <-matchResponse:
-		{
-			log.Printf("Got match %+v match\n", match)
-
-			wsjson.Write(r.Context(), conn, match)
+	for event := range matchResponse {
+		switch event.(type) {
+		case *Match:
+			log.Printf("Got match %+v match\n", event)
+			wsjson.Write(r.Context(), conn, event)
+		default:
+			wsjson.Write(r.Context(), conn, event)
 		}
-	case <-time.After(time.Minute * 2):
-		log.Printf("Waited for 2 minutes for a match")
 	}
-
 }
