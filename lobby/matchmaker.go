@@ -92,14 +92,16 @@ func (mm *MatchMaker) Start(ctx context.Context) error {
 
 		case player := <-mm.join:
 			log.Printf("Inserted player in queue %+v %+v\n", mm, player)
-			// notify all players about player
-			for _, p := range mm.players {
-				log.Println("Player joining...")
-				select {
-				case player.playersQueue <- p:
-				default:
+
+			go func(player *Player) {
+				// notify all players about player
+				for _, p := range mm.players {
+					if p.Id != player.Id && p.isWaiting {
+						log.Println("Player joining...")
+						player.playersQueue <- p
+					}
 				}
-			}
+			}(player)
 
 		case <-time.After(time.Second * 30):
 			log.Printf("Match maker status %+v", mm)

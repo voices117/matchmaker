@@ -26,7 +26,7 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker, matchResp
 			if player2.Id == player.Id {
 				continue
 			}
-			if !player.isValidMatch(player2) || !player2.isValidMatch(player) {
+			if !player.isValidMatch(player2) && !player2.isValidMatch(player) {
 				log.Printf("Player %v leaving Case...\n", player.Id)
 				matchResponse <- fmt.Sprintf("Tried to match with %v (ELO %v) but was not accepted", player2.Id, player2.elo)
 				continue
@@ -56,7 +56,7 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker, matchResp
 				log.Printf("Set player %v and %v in match\n", player.Id, player2.Id)
 				select {
 				case player2.MatchQueue <- &match:
-				case <-time.After(time.Second * 5):
+				case <-time.After(time.Second * 10):
 					log.Panicf("Failed sending game Id to player '%v'", player2.Id)
 				}
 
@@ -65,13 +65,12 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker, matchResp
 				log.Printf("Unlocked both players\n")
 				select {
 				case matchResponse <- &match:
-				case <-time.After(time.Second * 5):
+				case <-time.After(time.Second * 10):
 					log.Panicf("Failed sending match to matchResponse ")
 				}
 				log.Printf("Player %v created game correctly\n", player.Id)
 				return
 			} else {
-				mm.Add(ctx, player2.Id)
 				player2.mtx.Unlock()
 				player.mtx.Unlock()
 			}
@@ -85,7 +84,7 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker, matchResp
 
 		case <-time.After(time.Second * 5):
 			log.Printf("Player %v Relaxing Requirements...\n", player.Id)
-			player.relaxRequirements *= 1.03
+			player.relaxRequirements *= 1.1
 			mm.Add(ctx, player.Id)
 			matchResponse <- fmt.Sprintf("Relaxing matchmaking requirements: %v", player.relaxRequirements)
 		}
@@ -94,7 +93,7 @@ func (player *Player) StartPlayer(ctx context.Context, mm *MatchMaker, matchResp
 }
 
 func (player *Player) isValidMatch(player2 *Player) bool {
-	return Abs(player.elo-player2.elo) <= int(50*player.relaxRequirements)
+	return Abs(player.elo-player2.elo) <= int(70*player.relaxRequirements)
 }
 
 func (player *Player) setIsInGame() {

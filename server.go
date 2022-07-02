@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"time"
 )
 
 // Server is the type that implements the main server that
@@ -88,17 +89,26 @@ func (server *Server) Shutdown(ctx context.Context) error {
 // queue.
 func (s *Server) CreateBot(w http.ResponseWriter, r *http.Request) {
 	i := rand.Intn(999)
-	player := lobby.NewPlayer(lobby.PlayerId(fmt.Sprintf("Bot %v", i)))
 
-	go func(player *lobby.Player) {
-		log.Printf("Adding bot '%v' to queue \n", player.Id)
-
-		s.matchmaker.Service.AddPlayer(player)
-		s.matchmaker.Service.Add(r.Context(), player.Id)
+	go func() {
+		defer log.Printf(">>> Bot %v exit", i)
 		for {
-			s.botRoutine(player)
+			time.Sleep(time.Second * time.Duration(rand.Intn(5)))
+
+			ctx := context.Background()
+
+			player := lobby.NewPlayer(lobby.PlayerId(fmt.Sprintf("Bot %v", i)))
+
+			log.Printf("Adding bot '%v' to queue \n", player.Id)
+
+			s.matchmaker.Service.AddPlayer(&player)
+			if s.matchmaker.Service.Add(ctx, player.Id) != nil {
+				return
+			}
+
+			s.botRoutine(&player)
 		}
-	}(&player)
+	}()
 }
 
 func (s *Server) botRoutine(player *lobby.Player) {
