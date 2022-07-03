@@ -44,9 +44,9 @@ func (c *PlayerData) UpdateAfterMatch(player string, rune string, result string)
 		return
 	}
 	if strings.Contains(result, "won") && strings.Contains(result, rune) {
-		c.Update(player, playerElo + 100)
+		c.Update(player, playerElo + 50)
 	} else {
-		c.Update(player, playerElo - 50)
+		c.Update(player, playerElo - 25)
 	}
 
 	fmt.Println("ELO UPDATE! ", player, ":", playerElo, " ---> ", c.GetData(player))

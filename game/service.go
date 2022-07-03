@@ -15,14 +15,14 @@ import (
 // GameService is the game server implementation that handles
 // game rooms and game logic.
 type GameService struct {
-	rooms room.RoomManager
+	Rooms room.RoomManager
 }
 
 // NewGameService creates and initializes a new GameServer
 // instance.
 func NewGameService() GameService {
 	return GameService{
-		rooms: room.NewRoomManager(),
+		Rooms: room.NewRoomManager(),
 	}
 }
 
@@ -49,7 +49,7 @@ func (s *GameService) JoinGame(w http.ResponseWriter, r *http.Request) {
 	}
 	cancel()
 
-	room := s.rooms.GetOrCreate(login.GameRoomId)
+	room := s.Rooms.GetOrCreate(login.GameRoomId)
 	player, err := room.Join(login.ClientId)
 	if err != nil {
 		wsjson.Write(r.Context(), conn, msg.GameState{Error: err.Error()})
@@ -79,5 +79,4 @@ func (s *GameService) JoinGame(w http.ResponseWriter, r *http.Request) {
 		}
 		player.PlayerEvents <- playerMsg
 	}
-
 }
